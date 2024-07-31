@@ -8,6 +8,7 @@ import spring.lecture.web.member.Member;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Data
@@ -38,6 +39,16 @@ public class Subgroup {
     )
     private Set<Member> members = new HashSet<>();
 
-//    @OneToMany(mappedBy = "subgroup", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private Set<Event> events = new HashSet<>();
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Subgroup subgroup = (Subgroup) o;
+        return Objects.equals(id, subgroup.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }
