@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Integer> {
     List<Event> findByMemberId(Integer memberId);
-    List<Event> findBySharedMembersId(Integer sharedMembersId);
+    List<Event> findBySubgroupsId(Integer subgroupId);
 }
