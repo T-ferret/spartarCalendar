@@ -20,5 +20,5 @@ public class GroupApplication {
     private Member member;
 
 //    예시: "신청", "승인", "거절"
-    private String title;
+    private String status;
 }
