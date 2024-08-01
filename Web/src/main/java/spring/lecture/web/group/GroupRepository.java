@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface GroupRepository extends JpaRepository<Group, Integer> {
     List<Group> findByGroupName(String groupName);
+    List<Group> findByMemberId(Integer memberId);
     @Query("select g from Group g join g.tags t where t.name in :tags")
     List<Group> findByTags(@Param("tags") List<String> tags);
 }

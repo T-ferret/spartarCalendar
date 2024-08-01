@@ -15,13 +15,12 @@ import java.util.List;
 public class EventApiController {
     private final EventService eventService;
 
-    @GetMapping("/user/{memberId}/all-timeslots")
-    public ResponseEntity<List<LocalDateTime[]>> getAllUserTimeslots(
-            @PathVariable Integer memberId,
-            @RequestParam(defaultValue = "10") int intervalMinutes) {
-        List<LocalDateTime[]> timeSlots = eventService.getAllUserScheduleTimeSlots(memberId, intervalMinutes);
-        return ResponseEntity.ok(timeSlots);
-    }
+//    @GetMapping("/user/all-timeslots")
+//    public ResponseEntity<List<LocalDateTime[]>> getAllUserTimeslots(
+//            @RequestParam(defaultValue = "10") int intervalMinutes) {
+//        List<LocalDateTime[]> timeSlots = eventService.getAllUserScheduleTimeSlots(intervalMinutes);
+//        return ResponseEntity.ok(timeSlots);
+//    }
 
     @GetMapping("/subgroup/{subgroupId}/date/{date}")
     public ResponseEntity<DaySchedule> getFreeTimesForSubgroupOnDate(

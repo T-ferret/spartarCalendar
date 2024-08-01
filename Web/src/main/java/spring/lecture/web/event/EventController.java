@@ -23,7 +23,7 @@ public class EventController {
     public String createEvent(@ModelAttribute Event event) {
         event.setMember(memberService.getCurrentMember());
         eventService.save(event);
-        return "redirect:/events";
+        return "redirect:/landing";
     }
 
     @GetMapping("/update")

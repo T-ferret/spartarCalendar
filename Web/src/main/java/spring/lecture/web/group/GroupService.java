@@ -2,6 +2,7 @@ package spring.lecture.web.group;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import spring.lecture.web.member.MemberService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Set;
 public class GroupService {
     private final GroupRepository groupRepository;
     private final TagRepository tagRepository;
+    private final MemberService memberService;
 
     //    그룹 생성
     public void save(Group group) {
@@ -38,6 +40,12 @@ public class GroupService {
 //    모든 그룹 리스트 return
     public List<Group> findAll() {
         return groupRepository.findAll();
+    }
+
+//    특정 유저가 소속된 그룹 리스트 return
+    public List<Group> getGroupsByMemberId() {
+        Integer memberId = memberService.getCurrentMember().getId();
+        return groupRepository.findByMemberId(memberId);
     }
 
 //    이름으로 검색 후 그룹 리스트 return

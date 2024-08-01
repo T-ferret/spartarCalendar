@@ -4,13 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import spring.lecture.web.member.Member;
+import spring.lecture.web.member.MemberService;
 import spring.lecture.web.subgroup.Subgroup;
 import spring.lecture.web.subgroup.SubgroupService;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -19,8 +17,9 @@ import java.util.stream.Collectors;
 public class EventService {
     private final EventRepository eventRepository;
     private final SubgroupService subgroupService;
+    private final MemberService memberService;
 
-//    일정 생성
+    //    일정 생성
     public void save(Event event) {
         event.setCreateAt(LocalDateTime.now());
 //        db에 저장
@@ -106,8 +105,9 @@ public class EventService {
     }
 
 //    특정 유저의 모든 일정을 슬롯으로 return
-    public List<LocalDateTime[]> getAllUserScheduleTimeSlots(int userId, int intervalMinutes) {
-        List<Event> events = eventRepository.findByMemberId(userId);
+    public List<LocalDateTime[]> getAllUserScheduleTimeSlots(int intervalMinutes) {
+        Member currentUser = memberService.getCurrentMember();
+        List<Event> events = eventRepository.findByMemberId(currentUser.getId());
         List<LocalDateTime[]> allTimeSlots = new ArrayList<>();
         for (Event event : events) {
             Set<LocalDateTime> slots = generateTimeSlots(event.getStartTime(), event.getEndTime(), intervalMinutes);
@@ -138,6 +138,62 @@ public class EventService {
     return eventTimeSlots;
 }
 
+//    특정 월에 해당하는 소모임 내 일정 조회
+    public DaySchedule getSubgroupScheduleForMonth(int subgroupId, YearMonth yearMonth, int intervalMonth) {
+        LocalDateTime startOfMonth = yearMonth.atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = yearMonth.atEndOfMonth().atTime(LocalTime.MAX);
+
+//        특정 소모임 내 특정 월에 존재하는 일정 리스트 반환
+        List<Event> events = eventRepository.findBySubgroupIdAndDateTimeRange(subgroupId, startOfMonth, endOfMonth);
+        List<LocalDateTime[]> eventTimes = events.stream()
+                .map(e -> new LocalDateTime[]{e.getStartTime(), e.getEndTime()})
+                .toList();
+
+//        위에서 찾은 일정 리스트를 토대로, 특정 월의 비어 있는 시간대 반환
+        List<LocalDateTime[]> freeTimes = findFreeTimes(eventTimes);
+
+//        타임 슬롯 생성
+        Set<LocalDateTime> allSlots = generateTimeSlots(startOfMonth, endOfMonth, intervalMonth);
+
+//        사용중인 시간대 제거해 실제 사용 가능한 타임 슬롯 계산
+        freeTimes.forEach(range -> {
+            LocalDateTime start = range[0];
+            while (start.isBefore(range[1])) {
+                if (allSlots.contains(start)) {
+                    allSlots.remove(start);
+                }
+                start = start.plusMinutes(intervalMonth);
+            }
+        });
+
+//        소모임 내 유저 리스트 반환
+        Map<Integer, List<LocalDateTime[]>> userSchedules = new HashMap<>();
+        Set<Member> members = subgroupService.findById(subgroupId).getMembers();
+
+//        유저 리스트를 토대로, 특정 월의 각각 유저별 일정을 슬롯으로 반환
+        for (Member member : members) {
+            List<Event> userEvents = eventRepository.findByMemberIdAndDateTimeRange(member.getId(), startOfMonth, endOfMonth);
+            List<LocalDateTime[]> timeslots = new ArrayList<>();
+            for (Event event : userEvents) {
+                LocalDateTime currentTime = event.getStartTime();
+                while (currentTime.isBefore(event.getEndTime()) && !currentTime.isAfter(endOfMonth)) {
+                    timeslots.add(new LocalDateTime[]{currentTime, currentTime.plusMinutes(intervalMonth)});
+                    currentTime = currentTime.plusMinutes(intervalMonth);
+                }
+            }
+            userSchedules.put(member.getId(), timeslots);
+        }
+
+//        DaySchedule에 비어 있는 시간대와 각 유저별 일정 저장 및 반환
+        DaySchedule daySchedule = new DaySchedule();
+        daySchedule.setFreeTimes(freeTimes.stream()
+                .map(ft -> new LocalDateTime[]{ft[0], ft[0].plusMinutes(intervalMonth)})
+                .toList());
+        daySchedule.setUserSchedules(userSchedules);
+
+        return daySchedule;
+    }
+
 //    특정 날짜에 해당하는 소모임 내 일정 조회
     public DaySchedule getSubgroupScheduleForDay(int subgroupId, LocalDate date, int intervalMinutes) {
 //        특정 날짜의 시작 및 종료 시각 return
@@ -166,14 +222,6 @@ public class EventService {
                 start = start.plusMinutes(intervalMinutes);
             }
         });
-//        events.forEach(event -> {
-//            LocalDateTime start = event.getStartTime();
-//            LocalDateTime end = event.getEndTime();
-//            while (start.isBefore(end) && allSlots.contains(start)) {
-//                allSlots.remove(start);
-//                start = start.plusMinutes(10);
-//            }
-//        });
 
 //        소모임 내 유저 리스트 return
         Map<Integer, List<LocalDateTime[]>> userSchedules = new HashMap<>();
@@ -190,10 +238,6 @@ public class EventService {
                     currentTime = currentTime.plusMinutes(intervalMinutes);
                 }
             }
-//            List<LocalDateTime[]> userEventTimes = userEvents.stream()
-//                    .map(e -> new LocalDateTime[]{e.getStartTime(), e.getEndTime()})
-//                    .toList();
-//            userSchedules.put(member.getId(), userEventTimes);
             userSchedules.put(member.getId(), timeslots);
         }
 
